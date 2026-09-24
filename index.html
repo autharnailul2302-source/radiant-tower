@@ -850,7 +850,7 @@
             <!-- Avatar + Info -->
             <div style="display:flex; align-items:center; gap:18px; background:rgba(0,10,30,0.6); border:1px solid rgba(0,150,255,0.25); border-radius:12px; padding:16px; margin-bottom:20px; text-align:left; position:relative;">
                 <!-- Badge tier Survival — medal di pojok kanan-atas kartu, presisi DI DALAM kotak (bukan nongol keluar) -->
-                <div id="confirm-survival-badge" style="display:none; flex-direction:column; align-items:center; gap:3px; position:absolute; top:12px; right:12px; background:rgba(4,12,28,0.95); border-radius:14px; padding:8px 10px 7px; box-shadow:0 4px 14px rgba(0,0,0,0.5);"></div>
+                <div id="confirm-survival-badge" style="display:none; flex-direction:column; align-items:center; justify-content:center; gap:2px; position:absolute; top:8px; right:8px; width:120px; text-align:center;"></div>
                 <div style="position:relative; flex-shrink:0;">
                     <img id="confirm-avatar" src="images/cowok.png" style="width:90px; height:110px; object-fit:cover; object-position:top; border-radius:10px; border:2px solid var(--tech-cyan); box-shadow:0 0 16px rgba(0,180,255,0.4);">
                     <div id="confirm-gender-badge" style="position:absolute; bottom:-8px; left:50%; transform:translateX(-50%); background:var(--primary-blue); border:1px solid var(--tech-cyan); border-radius:20px; padding:2px 10px; font-family:'Orbitron', sans-serif; font-size:0.5rem; font-weight:700; color:white; white-space:nowrap;">COWOK</div>
@@ -4801,9 +4801,10 @@ class GameApp {
             const tier = bestWave > 0 ? getSurvivalTier(bestWave) : null;
             if (tier) {
                 survBadgeEl.style.display = 'flex';
-                survBadgeEl.style.border = '1px solid ' + tier.color;
-                survBadgeEl.style.boxShadow = '0 4px 14px rgba(0,0,0,0.5), 0 0 16px ' + tier.color + '55';
-                survBadgeEl.innerHTML = `${tierBadgeImgHtml(tier, 48)}<div style="font-family:'Orbitron', sans-serif; font-size:0.42rem; font-weight:800; letter-spacing:0.5px; white-space:nowrap; color:${tier.color}; text-shadow:0 0 8px ${tier.color}99;">${tier.name}</div>`;
+                survBadgeEl.style.border = 'none';
+                survBadgeEl.style.background = 'transparent';
+                survBadgeEl.style.boxShadow = 'none';
+                survBadgeEl.innerHTML = `<div style="display:flex; justify-content:center;">${tierBadgeImgHtml(tier, 92)}</div><div style="font-family:'Orbitron', sans-serif; font-size:0.48rem; font-weight:800; letter-spacing:0.5px; white-space:nowrap; color:${tier.color}; text-shadow:0 0 8px ${tier.color}99, 0 1px 3px rgba(0,0,0,0.9); text-align:center;">${tier.name}</div>`;
                 survBadgeEl.title = 'Wave terbaik Survival Bonus: ' + bestWave;
             } else {
                 survBadgeEl.style.display = 'none';
@@ -10537,6 +10538,12 @@ class ChapterEndingCinematic {
         vig.addColorStop(1,'rgba(0,0,0,0.72)');
         ctx.fillStyle = vig; ctx.fillRect(0,0,800,600);
 
+        // ── 6b. Letterbox bars (digambar SEBELUM caption, biar teks caption
+        // di bawah tidak ketutup/kepotong sama bar hitam ini) ──
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, 800, this.letterboxH);
+        ctx.fillRect(0, 600-this.letterboxH, 800, this.letterboxH);
+
         // ── 7. Caption box (typewriter, warna per slide) ──
         if(this.typeBuffer && this.alpha > 0.3) {
             const capColor = slide.color || '#FFFFFF';
@@ -10602,10 +10609,7 @@ class ChapterEndingCinematic {
             ctx.restore();
         }
 
-        // ── 9. Letterbox bars ──
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, 800, this.letterboxH);
-        ctx.fillRect(0, 600-this.letterboxH, 800, this.letterboxH);
+        // ── 9. (Letterbox bars sudah digambar di step 6b, sebelum caption) ──
 
         // ── 10. Flash putih antar slide ──
         if(this.flashAlpha > 0) {
@@ -15175,6 +15179,7 @@ class ChapterBossBattle {
         };
         this.heroFacing = 'right'; // player mulai di kiri arena, boss di kanan -> hadap kanan
         this.heroHitTimer = 0;     // >0 = sedang tampilkan sprite "kena serangan"
+        this.hurtFlashTimer = 0;  // >0 = layar kedip merah (vignette) saat hero kena serangan boss/minion
 
         // ── ULTIMATE SKILL VISUAL (saat SKILL dipakai) ──
         this.ultimateTimer = 0;       // >0 = sprite ganti jadi pose ultimate
@@ -15523,6 +15528,7 @@ class ChapterBossBattle {
     if(moveX > 0.05) this.heroFacing = 'right';
     else if(moveX < -0.05) this.heroFacing = 'left';
     if(this.heroHitTimer > 0) this.heroHitTimer--;
+    if(this.hurtFlashTimer > 0) this.hurtFlashTimer -= dt;
     if(this.ultimateTimer > 0) this.ultimateTimer--;
     if(this.laserTimer > 0) this.laserTimer--;
 
@@ -15620,6 +15626,7 @@ class ChapterBossBattle {
             this.playerHp -= 0.2;  // Turun dari 0.5 → 0.2 (lebih ringan)
             this.game.gameStats.damageTaken += 0.2;
             this.heroHitTimer = 20; // tampilkan sprite "kena serangan" sebentar
+            this.hurtFlashTimer = 260; // layar kedip merah tipis (kontak minion lebih ringan)
 
             // Visual feedback sesekali (cegah spam)
             if(Math.random() > 0.8) {
@@ -15695,6 +15702,7 @@ class ChapterBossBattle {
                 this.game.gameStats.damageTaken += p.damage;
                 this.game.screenShake = 10;
                 this.heroHitTimer = 20; // tampilkan sprite "kena serangan" sebentar
+                this.hurtFlashTimer = 400; // layar kedip merah — kena serangan boss
                 this.spawnDamage(this.playerX, this.playerY, "-" + p.damage, "red");
                 this.spawnExplosion(p.x, p.y, "red");
                 hit = true;
@@ -15831,6 +15839,19 @@ class ChapterBossBattle {
             ctx.fillText(t.val, t.x, t.y);
         });
         ctx.globalAlpha = 1;
+
+        // Vignette merah full-layar saat hero kena serangan (boss/minion) —
+        // sama seperti efek "kena hit" di mode lain (mis. Hutan Sedaya/Survival).
+        if(this.hurtFlashTimer > 0) {
+            const t = Math.min(1, this.hurtFlashTimer / 400);
+            ctx.save();
+            const grad = ctx.createRadialGradient(400, 300, 80, 400, 300, 480);
+            grad.addColorStop(0, 'rgba(200,0,0,0)');
+            grad.addColorStop(1, `rgba(200,0,0,${t * 0.65})`);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 800, 600);
+            ctx.restore();
+        }
     }
 
     // Render hero khusus boss battle: cuma 3 kemungkinan gambar (hadap kiri,
